@@ -48,7 +48,6 @@ paths:
               example:
                 success: true
                 message: "OTP sent successfully"
-                otpId: "otp_abc123def456"
         '400':
           description: Bad request - Invalid input data
           content:
@@ -175,7 +174,7 @@ components:
         phoneNumber:
           type: string
           pattern: '^\+[1-9]\d{1,14}$'
-          description: Phone number in E.164 format. Required if otpId is not provided.
+          description: Phone number in E.164 format.
           example: "+1234567890"
         otpCode:
           type: string
