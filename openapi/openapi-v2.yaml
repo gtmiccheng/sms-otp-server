@@ -1,0 +1,256 @@
+openapi: 3.0.3
+info:
+  title: SMS OTP Server API
+  description: |
+    SMS OTP (One-Time Password) Server API for generating and verifying time-based or counter-based OTP codes via SMS.
+    This API allows applications to implement two-factor authentication using SMS delivery.
+  version: 2.0.0
+  contact:
+    name: SMS OTP Server Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/v2
+    description: Local development server
+
+paths:
+  /otp/generate:
+    post:
+      summary: Generate OTP and send via SMS
+      description: |
+        Creates a new OTP (One-Time Password) and sends it to the specified phone number via SMS.
+        The OTP will be valid for a configurable time period (default: 5 minutes).
+      operationId: generateOTP
+      tags:
+        - OTP Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateOTPRequest'
+            examples:
+              basic:
+                summary: Basic OTP generation
+                value:
+                  phoneNumber: "+1234567890"
+              custom_expiry:
+                summary: Custom expiry time
+                value:
+                  phoneNumber: "+1234567890"
+                  expiryMinutes: 10
+      responses:
+        '200':
+          description: OTP generated and SMS sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateOTPResponse'
+              example:
+                success: true
+                message: "OTP sent successfully"
+                otpId: "otp_abc123def456"
+                expiresAt: "2025-10-21T15:30:00Z"
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "INVALID_PHONE_NUMBER"
+                message: "Phone number format is invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /otp/verify:
+    post:
+      summary: Verify OTP code
+      description: |
+        Verifies the provided OTP code against the generated OTP for the given phone number.
+        The OTP will be invalidated after successful verification or after expiration.
+      operationId: verifyOTP
+      tags:
+        - OTP Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOTPRequest'
+            examples:
+              basic:
+                summary: Basic OTP verification
+                value:
+                  phoneNumber: "+1234567890"
+                  otpCode: "123456"
+
+      responses:
+        '200':
+          description: OTP verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyOTPResponse'
+              examples:
+                success:
+                  summary: Successful verification
+                  value:
+                    success: true
+                    valid: true
+                    message: "OTP verified successfully"
+                    verifiedAt: "2025-10-21T15:25:30Z"
+                failed:
+                  summary: Failed verification
+                  value:
+                    success: true
+                    valid: false
+                    message: "Invalid OTP code"
+        '400':
+          description: Bad request - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "MISSING_REQUIRED_FIELD"
+                message: "OTP code is required"
+        '404':
+          description: OTP not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "OTP_NOT_FOUND"
+                message: "No active OTP found for this phone number"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    GenerateOTPRequest:
+      type: object
+      required:
+        - phoneNumber
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^\+[1-9]\d{1,14}$'
+          description: Phone number in E.164 format (e.g., +1234567890)
+          example: "+1234567890"
+        expiryMinutes:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 5
+          description: OTP expiry time in minutes (1-60 minutes)
+          example: 5
+        messageTemplate:
+          type: string
+          maxLength: 160
+          description: Custom SMS message template. Use {otp} placeholder for the OTP code.
+          example: "Your verification code is {otp}. Valid for 5 minutes."
+
+    GenerateOTPResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+          example: true
+        message:
+          type: string
+          description: Human-readable success message
+          example: "OTP sent successfully"
+        expiresAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the OTP expires
+          example: "2025-10-21T15:30:00Z"
+
+    VerifyOTPRequest:
+      type: object
+      required:
+        - phoneNumber
+        - otpCode
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^\+[1-9]\d{1,14}$'
+          description: Phone number in E.164 format. Required if otpId is not provided.
+          example: "+1234567890"
+        otpCode:
+          type: string
+          pattern: '^[0-9]{4,8}$'
+          description: The OTP code to verify (4-8 digits)
+          example: "123456"
+
+    VerifyOTPResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the API call was successful
+          example: true
+        valid:
+          type: boolean
+          description: Whether the OTP is valid
+          example: true
+        message:
+          type: string
+          description: Human-readable result message
+          example: "OTP verified successfully"
+        verifiedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when verification occurred
+          example: "2025-10-21T15:25:30Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+        error:
+          type: string
+          description: Error code for programmatic handling
+          enum:
+            - INVALID_PHONE_NUMBER
+            - INVALID_OTP_CODE
+            - OTP_NOT_FOUND
+            - OTP_EXPIRED
+            - OTP_ALREADY_VERIFIED
+            - SMS_DELIVERY_FAILED
+            - MISSING_REQUIRED_FIELD
+            - INVALID_REQUEST_FORMAT
+            - INTERNAL_SERVER_ERROR
+          example: "INVALID_PHONE_NUMBER"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Phone number format is invalid"
+        details:
+          type: object
+          description: Additional error context (optional)
+          additionalProperties: true
+
+tags:
+  - name: OTP Management
+    description: Operations for generating, verifying, and managing OTP codes
