@@ -11,8 +11,8 @@ This is a backend service that provides endpoints for sending and verifying One-
 
 ### Use Swagger UI
 
-1. Visit [Swagger Editor](https://editor.swagger.io/).
-2. Import this URL: `https://raw.githubusercontent.com/gtmiccheng/sms-otp-server/refs/heads/main/openapi/openapi-v1.yaml`
+1. Visit [Swagger UI](https://https://petstore.swagger.io/).
+2. Use this URL: `https://raw.githubusercontent.com/gtmiccheng/sms-otp-server/refs/heads/main/openapi/openapi-v1.yaml`
 3. You can now view and interact with the API documentation.
 
 ### Use a OpenAPI Extension in VSCode
